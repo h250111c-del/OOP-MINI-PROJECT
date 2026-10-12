@@ -37,6 +37,10 @@ public final class Library {
         if (!item.isAvailable()) {
             throw new ItemNotAvailableException("Item is not available: " + itemId);
         }
+        if (findActiveLoan(memberId, itemId) != null) {
+            throw new IllegalStateException(
+                    "Member " + memberId + " already has an active loan for item " + itemId);
+        }
         if (member.getActiveLoanCount() >= MAX_LOANS_PER_MEMBER) {
             throw new MemberLimitExceededException(
                     "Member " + memberId + " already has the maximum of "
@@ -54,12 +58,11 @@ public final class Library {
     public void returnItem(String memberId, String itemId) {
         Member member = getMemberOrThrow(memberId);
         LibraryItem item = getItemOrThrow(itemId);
-        Loan activeLoan = loans.stream()
-                .filter(loan -> loan.getMemberId().equals(memberId)
-                        && loan.getItemId().equals(itemId) && !loan.isReturned())
-                .findFirst()
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "No active loan exists for member " + memberId + " and item " + itemId));
+        Loan activeLoan = findActiveLoan(memberId, itemId);
+        if (activeLoan == null) {
+            throw new IllegalArgumentException(
+                    "No active loan exists for member " + memberId + " and item " + itemId);
+        }
         if (!memberId.equals(item.getBorrowerId())) {
             throw new IllegalStateException("Item loan state does not match its active loan");
         }
@@ -98,6 +101,14 @@ public final class Library {
 
     public List<Loan> getLoans() {
         return List.copyOf(loans);
+    }
+
+    private Loan findActiveLoan(String memberId, String itemId) {
+        return loans.stream()
+                .filter(loan -> loan.getMemberId().equals(memberId)
+                        && loan.getItemId().equals(itemId) && !loan.isReturned())
+                .findFirst()
+                .orElse(null);
     }
 
     Member getMemberOrThrow(String memberId) {
