@@ -1,6 +1,6 @@
 package library;
 
-public final class Book extends LibraryItem {
+public class Book extends LibraryItem {
     public Book(String id, String title) {
         super(id, title);
     }
